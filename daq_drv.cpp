@@ -50,7 +50,7 @@ void Daq::swap(size_t bid){
     std::swap(write_buf, read_buf);
     buf_id=bid;
     {
-        std::lock_guard<std::mutex> lk(mx);
+        //std::lock_guard<std::mutex> lk(mx);
     }
     cv.notify_all();
 }
