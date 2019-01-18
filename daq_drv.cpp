@@ -49,6 +49,18 @@ void Daq::swap(size_t bid){
     std::cout<<"swapped"<<" "<<bid<<std::endl;
     std::swap(write_buf, read_buf);
     buf_id=bid;
+    {
+        std::lock_guard<std::mutex> lk(mx);
+    }
+    cv.notify_all();
+}
+
+
+void Daq::fetch(){
+    auto current_id=buf_id.load();
+    std::unique_lock<std::mutex> lk(mx);
+    cv.wait(lk, [&]() {return current_id!=buf_id.load();});
+    std::cerr<<"fetched "<<buf_id.load()<<" from "<<dev_name<<std::endl;
 }
 
 

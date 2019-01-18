@@ -9,6 +9,9 @@
 #include <unistd.h>
 #include <fcntl.h>           /* For O_* constants */
 #include <thread>
+#include <mutex>
+#include  <condition_variable>
+
 static constexpr size_t N_CH=2048/2;
 static constexpr size_t SPEC_LEN=N_CH*4;
 static constexpr size_t ID_SIZE=8;
@@ -30,6 +33,8 @@ public:
     std::unique_ptr<std::complex<float>, decltype(&unmap)> read_buf;
     std::atomic_size_t buf_id;
     std::thread task;
+    std::mutex mx;
+    std::condition_variable cv;
 
 public:    
     Daq(const char* name1);
@@ -39,6 +44,7 @@ public:
 public:
     void swap(size_t bid);
     void run();
+    void fetch();
 };
 
 
