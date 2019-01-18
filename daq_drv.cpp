@@ -27,6 +27,8 @@ write_buf((std::complex<float>*)mmap(nullptr,BUF_SIZE*sizeof(std::complex<float>
     PROT_WRITE|PROT_READ, MAP_SHARED,fd, 0), unmap),
 read_buf((std::complex<float>*)mmap(nullptr,BUF_SIZE*sizeof(std::complex<float>), 
     PROT_WRITE|PROT_READ, MAP_SHARED,fd, BUF_SIZE*sizeof(std::complex<float>)), unmap),
+proc_buf((std::complex<float>*)mmap(nullptr,BUF_SIZE*sizeof(std::complex<float>), 
+    PROT_WRITE|PROT_READ, MAP_SHARED,fd, 2*BUF_SIZE*sizeof(std::complex<float>)), unmap),
 buf_id(0),
 task([this](){this->run();})
 {
@@ -36,7 +38,7 @@ task([this](){this->run();})
 
 int Daq::init_fd(const char* name){
     auto fd=shm_open(name, O_RDWR|O_CREAT, 0777);
-    ftruncate(fd, BUF_SIZE*2*sizeof(std::complex<float>));
+    ftruncate(fd, BUF_SIZE*3*sizeof(std::complex<float>));
     return fd;
 }
 
@@ -56,11 +58,14 @@ void Daq::swap(size_t bid){
 }
 
 
-void Daq::fetch(){
+std::tuple<std::complex<float>*, size_t> Daq::fetch(){
     auto current_id=buf_id.load();
     std::unique_lock<std::mutex> lk(mx);
     cv.wait(lk, [&]() {return current_id!=buf_id.load();});
     std::cerr<<"fetched "<<buf_id.load()<<" from "<<dev_name<<std::endl;
+    //return std::make_tuple(read_buf.get(), buf_id.load());
+    read_buf.swap(proc_buf);
+    return std::make_tuple(proc_buf.get(), buf_id.load());
 }
 
 

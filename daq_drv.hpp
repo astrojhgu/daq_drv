@@ -11,6 +11,7 @@
 #include <thread>
 #include <mutex>
 #include  <condition_variable>
+#include <tuple>
 
 static constexpr size_t N_CH=2048/2;
 static constexpr size_t SPEC_LEN=N_CH*4;
@@ -31,6 +32,7 @@ public:
     int fd;
     std::unique_ptr<std::complex<float>, decltype(&unmap)> write_buf;
     std::unique_ptr<std::complex<float>, decltype(&unmap)> read_buf;
+    std::unique_ptr<std::complex<float>, decltype(&unmap)> proc_buf;
     std::atomic_size_t buf_id;
     std::thread task;
     std::mutex mx;
@@ -44,7 +46,7 @@ public:
 public:
     void swap(size_t bid);
     void run();
-    void fetch();
+    std::tuple<std::complex<float>*, size_t> fetch();
 };
 
 

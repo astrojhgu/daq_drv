@@ -17,13 +17,17 @@ int main(int argc, char* argv[])
         daqs.push_back(new Daq(argv[i]));
     }
     std::cout<<"waiting..."<<std::endl;
+    
     while(1){
-        std::vector<future<void> > futures;
+        std::vector<future<std::tuple<std::complex<float>*, size_t>>> futures;
         for(auto& i:daqs){
-            futures.push_back(std::async(std::launch::async, [&](){i->fetch();}));
+            futures.push_back(std::async(std::launch::async, [&](){    
+                return i->fetch();
+                }));
         }
         for(auto& i:futures){
             i.get();
+            
         }
 //        daqs[0]->fetch();
     }
