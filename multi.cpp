@@ -23,11 +23,16 @@ int main(int argc, char* argv[])
         std::vector<future<float>> futures;
         for(auto& i:daqs){
             futures.push_back(std::async(std::launch::async, [&](){    
+                vector<float> data(N_CH*CH_SPLIT);
                 auto result= i->fetch();
                 auto p=std::get<0>(result);
                 float x=0;
                 for(int j=0;j<N_CH*CH_SPLIT*N_CHUNKS;++j){
-                    x+=std::sqrt(std::norm(p[j]));
+                    //x+=std::sqrt(std::norm(p[j]));
+                    data[j%(N_CH*CH_SPLIT)]+=std::norm(p[j]);
+                }
+                for(int j=0;j<N_CH*CH_SPLIT;++j){
+                    x+=data[j];
                 }
 
                 return x;
