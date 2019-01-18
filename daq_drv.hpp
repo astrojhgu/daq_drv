@@ -31,11 +31,11 @@ public:
     const char* dev_name;
     int fd;
     std::unique_ptr<std::complex<float>, decltype(&unmap)> write_buf;
-    std::unique_ptr<std::complex<float>, decltype(&unmap)> read_buf;
     std::unique_ptr<std::complex<float>, decltype(&unmap)> proc_buf;
     std::atomic_size_t buf_id;
+    std::atomic_bool swap_buf;
     std::thread task;
-    std::mutex mx;
+    std::mutex mx_cv, mx_swap;
     std::condition_variable cv;
 
 public:    

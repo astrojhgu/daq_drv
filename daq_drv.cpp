@@ -25,20 +25,18 @@ Daq::Daq(const char* name1)
 fd(init_fd(name1)),
 write_buf((std::complex<float>*)mmap(nullptr,BUF_SIZE*sizeof(std::complex<float>), 
     PROT_WRITE|PROT_READ, MAP_SHARED,fd, 0), unmap),
-read_buf((std::complex<float>*)mmap(nullptr,BUF_SIZE*sizeof(std::complex<float>), 
-    PROT_WRITE|PROT_READ, MAP_SHARED,fd, BUF_SIZE*sizeof(std::complex<float>)), unmap),
 proc_buf((std::complex<float>*)mmap(nullptr,BUF_SIZE*sizeof(std::complex<float>), 
-    PROT_WRITE|PROT_READ, MAP_SHARED,fd, 2*BUF_SIZE*sizeof(std::complex<float>)), unmap),
-buf_id(0),
+    PROT_WRITE|PROT_READ, MAP_SHARED,fd, BUF_SIZE*sizeof(std::complex<float>)), unmap),
+buf_id(0),swap_buf(false),
 task([this](){this->run();})
 {
     memset(write_buf.get(), 0x0f, BUF_SIZE*sizeof(std::complex<float>));
-    memset(read_buf.get(), 0x0f, BUF_SIZE*sizeof(std::complex<float>));
+    memset(proc_buf.get(), 0x0f, BUF_SIZE*sizeof(std::complex<float>));
 }
 
 int Daq::init_fd(const char* name){
     auto fd=shm_open(name, O_RDWR|O_CREAT, 0777);
-    ftruncate(fd, BUF_SIZE*3*sizeof(std::complex<float>));
+    ftruncate(fd, BUF_SIZE*2*sizeof(std::complex<float>));
     return fd;
 }
 
@@ -48,23 +46,35 @@ Daq::~Daq(){
 }
 
 void Daq::swap(size_t bid){
-    std::cout<<"swapped"<<" "<<bid<<std::endl;
-    std::swap(write_buf, read_buf);
-    buf_id=bid;
     {
-        //std::lock_guard<std::mutex> lk(mx);
+        std::lock_guard<std::mutex> lk(mx_swap);
+        if(swap_buf){
+            std::swap(write_buf, proc_buf);
+            swap_buf.store(false);
+            std::cout<<"swappe "<<bid<<std::endl;
+        }
+        else{
+            std::cout<<"skipped "<<bid<<std::endl;
+        }
+        buf_id=bid;
     }
     cv.notify_all();
 }
 
 
 std::tuple<std::complex<float>*, size_t> Daq::fetch(){
-    auto current_id=buf_id.load();
-    std::unique_lock<std::mutex> lk(mx);
+    size_t current_id=0;
+    {
+        std::lock_guard<std::mutex> lk (mx_swap);
+        swap_buf.store(true);
+        current_id=buf_id.load();
+    }
+
+    std::unique_lock<std::mutex> lk(mx_cv);
     cv.wait(lk, [&]() {return current_id!=buf_id.load();});
     std::cerr<<"fetched "<<buf_id.load()<<" from "<<dev_name<<std::endl;
     //return std::make_tuple(read_buf.get(), buf_id.load());
-    read_buf.swap(proc_buf);
+   // read_buf.swap(proc_buf);
     return std::make_tuple(proc_buf.get(), buf_id.load());
 }
 
