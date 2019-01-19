@@ -201,7 +201,7 @@ std::tuple<size_t, std::vector<std::complex<float>*>> DaqPool::fetch(){
             std::tie(ptr_list[i], id_list[i])=futures[i].get();
         }
         auto m1=std::max_element(id_list.begin(), id_list.end());
-        auto m2=std::max_element(id_list.begin(), id_list.end());
+        auto m2=std::min_element(id_list.begin(), id_list.end());
         if(m1==m2){
             break;
         }else{
