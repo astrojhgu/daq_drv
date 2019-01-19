@@ -12,6 +12,8 @@
 #include <mutex>
 #include  <condition_variable>
 #include <tuple>
+#include <vector>
+#include <future>
 
 static constexpr size_t N_CH=2048/2;
 static constexpr size_t SPEC_LEN=N_CH*4;
@@ -47,8 +49,16 @@ public:
     void swap(size_t bid);
     void run();
     std::tuple<std::complex<float>*, size_t> fetch();
+    std::future<std::tuple<std::complex<float>*, size_t>> fetch_async();
 };
 
 
+class DaqPool{
+    std::vector<std::unique_ptr<Daq>> pool;
+public:
+    DaqPool(const std::vector<const char*>& names);
+
+    std::tuple<size_t, std::vector<std::complex<float>*>> fetch();
+};
 
 #endif

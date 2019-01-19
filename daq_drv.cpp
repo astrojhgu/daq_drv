@@ -10,7 +10,7 @@
 #include <future>
 #include <fftw3.h>
 #include <fcntl.h>           /* For O_* constants */
-
+#include <algorithm>
 #include "daq_drv.hpp"
 
 void unmap(std::complex<float>* p)
@@ -51,10 +51,10 @@ void Daq::swap(size_t bid){
         if(swap_buf){
             std::swap(write_buf, proc_buf);
             swap_buf.store(false);
-            std::cout<<"swappe "<<bid<<std::endl;
+            std::cout<<"swapped "<<bid<<" "<<dev_name<<std::endl;
         }
         else{
-            std::cout<<"skipped "<<bid<<std::endl;
+            std::cout<<"skipped "<<bid<<" "<<dev_name<<std::endl;
         }
         buf_id=bid;
     }
@@ -78,6 +78,11 @@ std::tuple<std::complex<float>*, size_t> Daq::fetch(){
     return std::make_tuple(proc_buf.get(), buf_id.load());
 }
 
+std::future<std::tuple<std::complex<float>*, size_t>> Daq::fetch_async(){
+    return std::async(std::launch::async, [this](){    
+                return this->fetch();                
+                });
+}
 
 void Daq::run(){
     char ebuf[1024];
@@ -166,9 +171,42 @@ void Daq::run(){
 
 
         if(i%100000==0){
-            std::cout<<id<<" "<< 100000./(id-old_stat_id)<<std::endl;            
+            //std::cout<<id<<" "<< 100000./(id-old_stat_id)<<std::endl;    
+            if(id-old_stat_id!=100000){
+                std::cout<<"losting "<<id-old_stat_id-100000<<" packets"<<std::endl;
+            }        
             old_stat_id=id;
         }
 	    old_id=id;
     }
+}
+
+DaqPool::DaqPool(const std::vector<const char*>& names)
+{
+    for(auto i:names){
+        pool.push_back(std::move(std::unique_ptr<Daq>(new Daq(i))));
+    }
+}
+
+std::tuple<size_t, std::vector<std::complex<float>*>> DaqPool::fetch(){
+    auto n=pool.size();
+    std::vector<size_t> id_list(n);
+    std::vector<std::complex<float>*> ptr_list(n);
+    while(1){
+        std::vector<std::future<std::tuple<std::complex<float>*,size_t>>> futures;
+        for(auto& i:pool){
+            futures.push_back(i->fetch_async());
+        }
+        for(size_t i=0;i<futures.size();++i){
+            std::tie(ptr_list[i], id_list[i])=futures[i].get();
+        }
+        auto m1=std::max_element(id_list.begin(), id_list.end());
+        auto m2=std::max_element(id_list.begin(), id_list.end());
+        if(m1==m2){
+            break;
+        }else{
+            std::cout<<"async"<<std::endl;
+        }
+    }
+    return std::make_tuple(id_list.front(), ptr_list);
 }
