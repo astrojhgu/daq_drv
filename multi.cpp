@@ -6,8 +6,8 @@
 using namespace std;
 
 constexpr size_t N_CH = 1024;
-constexpr size_t CH_SPLIT = 4;
-constexpr size_t N_CHUNKS = 65536;
+constexpr size_t CH_SPLIT = 8;
+constexpr size_t N_CHUNKS = 65536 / CH_SPLIT * 4;
 
 int main (int argc, char *argv[])
 {
@@ -18,12 +18,16 @@ int main (int argc, char *argv[])
         }
     omp_set_dynamic (0);
     std::vector<const char *> names;
+    std::vector<int> cpu_ids;
+    int cpu_id = 0;
     for (int i = 1; i < argc; ++i)
         {
             names.push_back (argv[i]);
+            cpu_ids.push_back ((cpu_id * 9) % 16);
+            cpu_id += 1;
         }
 
-    DaqPool pool (names, N_CH, CH_SPLIT, N_CHUNKS);
+    DaqPool pool (names, N_CH, CH_SPLIT, N_CHUNKS, cpu_ids);
 
     while (1)
         {
@@ -38,6 +42,7 @@ int main (int argc, char *argv[])
             vector<std::complex<float>> corr (N_CH * CH_SPLIT);
             auto p1 = std::get<1> (data)[0];
             auto p2 = std::get<1> (data)[1];
+
             for (size_t i = 0; i < N_CHUNKS; ++i)
                 {
 #pragma omp parallel for num_threads(4)
@@ -46,7 +51,7 @@ int main (int argc, char *argv[])
                             corr[j] += p1[i * N_CH * CH_SPLIT + j] * p2[i * N_CH * CH_SPLIT + j] / (float)N_CHUNKS;
                         }
                 }
-            std::cout << corr[1002] << std::endl;
+            std::cout << corr[1004] << std::endl;
             /*
             for(int j=0;j<N_CH*CH_SPLIT*N_CHUNKS;++j){
                         //x+=std::sqrt(std::norm(p[j]));

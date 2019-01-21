@@ -6,7 +6,7 @@ sudo ifconfig ens5f1 promisc mtu 9000
 
 sudo ifconfig ens5f0 192.168.2.2
 sudo ifconfig ens5f1 192.168.3.2
-
+exit
 
 #sudo ifconfig ens3f0 mtu 9000
 #sudo ethtool --pause ens5f0 autoneg on tx on rx on

@@ -15,7 +15,7 @@
 #include "daq_drv.hpp"
 
 
-Daq::Daq (const char *name1, size_t n_raw_ch1, size_t ch_split1, size_t n_chunks1)
+Daq::Daq (const char *name1, size_t n_raw_ch1, size_t ch_split1, size_t n_chunks1, int cpu_id)
 : dev_name (name1), n_raw_ch (n_raw_ch1), ch_split (ch_split1), n_chunks (n_chunks1),
   spec_len (n_raw_ch * 4), packet_size (spec_len + ID_SIZE + HEAD_LEN),
   buf_size (n_raw_ch * ch_split * n_chunks),
@@ -36,6 +36,14 @@ Daq::Daq (const char *name1, size_t n_raw_ch1, size_t ch_split1, size_t n_chunks
 
     memset (write_buf.get (), 0x0f, buf_size * sizeof (std::complex<float>));
     memset (proc_buf.get (), 0x0f, buf_size * sizeof (std::complex<float>));
+    if (cpu_id >= 0)
+        {
+            cpu_set_t cpu_set;
+            CPU_ZERO (&cpu_set);
+            CPU_SET (cpu_id, &cpu_set);
+            auto this_tid = task.native_handle ();
+            // pthread_setaffinity_np(this_tid, sizeof(cpu_set_t), &cpu_set);
+        }
 }
 
 int Daq::init_fd (const char *name)
@@ -137,7 +145,7 @@ void Daq::run ()
 
     auto fft = fftwf_plan_many_dft (rank, n, howmany, reinterpret_cast<fftwf_complex *> (buf.data ()), inembed,
                                     istrid, idist, reinterpret_cast<fftwf_complex *> (buf_fft.data ()),
-                                    onembed, ostrid, odist, FFTW_FORWARD, FFTW_MEASURE);
+                                    onembed, ostrid, odist, FFTW_FORWARD, FFTW_EXHAUSTIVE);
 
 
     size_t old_stat_id = 0;
@@ -213,11 +221,17 @@ void Daq::run ()
         }
 }
 
-DaqPool::DaqPool (const std::vector<const char *> &names, size_t n_ch, size_t ch_split, size_t n_chunks)
+DaqPool::DaqPool (const std::vector<const char *> &names,
+                  size_t n_ch,
+                  size_t ch_split,
+                  size_t n_chunks,
+                  const std::vector<int> &cpu_ids)
 {
-    for (auto i : names)
+    assert (names.size () == cpu_ids.size ());
+    for (size_t i = 0; i < names.size (); ++i)
         {
-            pool.push_back (std::move (std::unique_ptr<Daq> (new Daq (i, n_ch, ch_split, n_chunks))));
+            pool.push_back (
+            std::move (std::unique_ptr<Daq> (new Daq (names[i], n_ch, ch_split, n_chunks, cpu_ids[i]))));
         }
 }
 

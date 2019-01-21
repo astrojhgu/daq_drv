@@ -46,7 +46,7 @@ class Daq
     std::condition_variable cv;
 
   public:
-    Daq (const char *name1, size_t n_raw_ch1, size_t ch_split1, size_t n_chunks1);
+    Daq (const char *name1, size_t n_raw_ch1, size_t ch_split1, size_t n_chunks1, int cpu_id = -1);
     ~Daq ();
 
     int init_fd (const char *name);
@@ -64,7 +64,11 @@ class DaqPool
     std::vector<std::unique_ptr<Daq>> pool;
 
   public:
-    DaqPool (const std::vector<const char *> &names, size_t n_ch, size_t ch_split, size_t n_chunks);
+    DaqPool (const std::vector<const char *> &names,
+             size_t n_ch,
+             size_t ch_split,
+             size_t n_chunks,
+             const std::vector<int> &cpu_ids);
 
     std::tuple<size_t, std::vector<std::complex<float> *>> fetch ();
 };
