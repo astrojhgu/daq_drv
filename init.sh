@@ -1,11 +1,20 @@
 #!/bin/sh
 
 #sudo modprobe netmap
-sudo ifconfig ens5f0 promisc mtu 9000
-sudo ifconfig ens5f1 promisc mtu 9000
+ip token|awk '{print $4}'|while read dev;
+do
+    dri=`ethtool -i $dev |grep driver|awk '{print $2}'`
+    if [ $dri == 'ixgbe' ]
+    then
+	echo $dev
+	sudo ifconfig ${dev} promisc mtu 9000
+    fi
+done
 
-sudo ifconfig ens5f0 192.168.2.2
-sudo ifconfig ens5f1 192.168.3.2
+
+
+#sudo ifconfig ens5f0 192.168.2.2
+#sudo ifconfig ens5f1 192.168.3.2
 exit
 
 #sudo ifconfig ens3f0 mtu 9000

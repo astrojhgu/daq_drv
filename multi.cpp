@@ -7,7 +7,7 @@ using namespace std;
 
 constexpr size_t N_CH = 1024;
 constexpr size_t CH_SPLIT = 8;
-constexpr size_t N_CHUNKS = 65536 / CH_SPLIT * 4;
+constexpr size_t N_CHUNKS = 65536 / CH_SPLIT*4;
 
 int main (int argc, char *argv[])
 {
