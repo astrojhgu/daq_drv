@@ -31,10 +31,16 @@ int main(int argc, char* argv[])
         vector<std::complex<float>> corr(N_CH*CH_SPLIT);
         auto p1=std::get<1>(data)[0];
         auto p2=std::get<1>(data)[1];
-        #pragma omp parallel for num_threads(4)
+        for(int i=0;i<N_CHUNKS;++i){
+            #pragma omp parallel for num_threads(4)
+            for(int j=0;j<N_CH*CH_SPLIT;++j){
+                corr[j]+=p1[i*N_CH*CH_SPLIT+j]*p2[i*N_CH*CH_SPLIT+j];
+            }
+        }
+        /*
         for(int j=0;j<N_CH*CH_SPLIT*N_CHUNKS;++j){
                     //x+=std::sqrt(std::norm(p[j]));
             corr[j%(N_CH*CH_SPLIT)]+=p1[j]*std::conj(p2[j]);
-        }
+        }*/
     }
 }

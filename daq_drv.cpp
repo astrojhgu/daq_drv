@@ -85,14 +85,26 @@ std::future<std::tuple<std::complex<float>*, size_t>> Daq::fetch_async(){
 }
 
 void Daq::run(){
-    char ebuf[1024];
+    char error_buffer[1024];
     const u_char *packet;
     pcap_pkthdr header;
-    pcap_t* cap=pcap_open_live(this->dev_name, 9000, 1, 1, ebuf);
+    //pcap_t* cap=pcap_open_live(this->dev_name, 9000, 1, 1, ebuf);
+    pcap_t *cap = pcap_create(this->dev_name, error_buffer);
     if(cap==nullptr){
-        std::cout<<ebuf<<std::endl;
+        std::cout<<error_buffer<<std::endl;
         exit(1);
     }
+    pcap_set_rfmon(cap, 0);
+    pcap_set_promisc(cap, 1);
+    pcap_set_snaplen(cap, 9000);
+    pcap_set_timeout(cap, 1);
+    
+    if((pcap_set_buffer_size(cap, 512*1024*1024))!=0)
+    {
+        std::cerr<<"err"<<std::endl;
+        exit(1);
+    }
+    pcap_activate(cap);
 
     std::vector<std::complex<float>> buf(N_CH*CH_SPLIT);
     
@@ -203,6 +215,7 @@ std::tuple<size_t, std::vector<std::complex<float>*>> DaqPool::fetch(){
         auto m1=std::max_element(id_list.begin(), id_list.end());
         auto m2=std::min_element(id_list.begin(), id_list.end());
         if(m1==m2){
+            std::cout<<"fetched"<<std::endl;
             break;
         }else{
             std::cout<<"async"<<std::endl;
