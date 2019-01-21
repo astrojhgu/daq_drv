@@ -10,5 +10,5 @@ int main(int argc, char* argv[])
         exit(0);
     }
 
-    Daq daq(argv[1]);
+    Daq daq(argv[1], 1024, 4, 65536);
 }
