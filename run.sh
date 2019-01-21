@@ -1,5 +1,6 @@
 #!/bin/sh
-#export GOMP_CPU_AFFINITY=0-2
+#export GOMP_CPU_AFFINITY="10 11 12 13"
+#export GOMP_CPU_AFFINITY="0 1 2 3"
 #export OMP_PROC_BIND=true
 sudo rm -f /dev/shm/*
 rm -f devs.txt
@@ -14,10 +15,17 @@ do
 done
 
 devs=`cat devs.txt`
-#sudo taskset -a -c 0-5 nice -n -20 ./multi $devs
-#sudo taskset -a -c 9-15 nice -n -20 ./multi $devs
+dev1=`head -1 devs.txt`
+node=`numactl --prefer netdev:${dev1} --show|grep 'preferred node'|awk '{print $3}'`
+echo $node
+
+#sudo taskset -a -c 0-7 nice -n -20 ./multi $devs
+#sudo taskset -a -c 8-12 nice -n -20 ./multi $devs
 #sudo numactl -N 1 --localalloc ./multi $devs
-sudo numactl -N 1 --interleave=all ./multi $devs
+#sudo numactl -N 1 --interleave=all ./multi $devs
 
 #sudo taskset -c 8-13 nice -n -20 ./multi ens5f0 ens5f1
 #sudo numactl --localalloc taskset -a -c 8-15 nice -n -20 ./multi $devs
+#sudo  numactl --interleave=all ./multi $devs
+#numactl --localalloc ./multi $devs
+numactl --preferred=netdev:$dev1 ./multi $devs

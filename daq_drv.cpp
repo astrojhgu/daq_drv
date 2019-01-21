@@ -42,7 +42,7 @@ Daq::Daq (const char *name1, size_t n_raw_ch1, size_t ch_split1, size_t n_chunks
             CPU_ZERO (&cpu_set);
             CPU_SET (cpu_id, &cpu_set);
             auto this_tid = task.native_handle ();
-            // pthread_setaffinity_np(this_tid, sizeof(cpu_set_t), &cpu_set);
+            pthread_setaffinity_np(this_tid, sizeof(cpu_set_t), &cpu_set);
         }
 }
 
@@ -94,7 +94,7 @@ std::tuple<std::complex<float> *, size_t> Daq::fetch ()
 
     std::unique_lock<std::mutex> lk (mx_cv);
     cv.wait (lk, [&]() { return current_id != buf_id.load (); });
-    std::cerr << "fetched " << buf_id.load () << " from " << dev_name << std::endl;
+    //std::cerr << "fetched " << buf_id.load () << " from " << dev_name << std::endl;
     // return std::make_tuple(read_buf.get(), buf_id.load());
     // read_buf.swap(proc_buf);
     return std::make_tuple (proc_buf.get (), buf_id.load ());
@@ -271,7 +271,7 @@ std::tuple<size_t, std::vector<std::complex<float> *>> DaqPool::fetch ()
             std::cerr << "Async, fetching..." << std::endl;
             for (auto i : to_be_fetched)
                 {
-                    std::cerr << "fetching: " << i << std::endl;
+                    std::cerr << "fetching device " << i <<"    "<<pool[i]->dev_name<< std::endl;
                     std::tie (ptr_list[i], id_list[i]) = futures[i].get ();
                 }
         }
