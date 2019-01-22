@@ -57,7 +57,7 @@ class Daq
     void run ();
     std::tuple<std::complex<float> *, size_t> fetch ();
     std::future<std::tuple<std::complex<float> *, size_t>> fetch_async ();
-    void bind_cpu();
+    void bind_cpu ();
 };
 
 

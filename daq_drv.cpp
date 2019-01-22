@@ -32,8 +32,7 @@ Daq::Daq (const char *name1, size_t n_raw_ch1, size_t ch_split1, size_t n_chunks
                                          fd,
                                          buf_size * sizeof (std::complex<float>)),
             unmapper),
-  buf_id (0), swap_buf (false), task ([this]() { this->run (); }),
-  cpu_id(cpu_id1)
+  buf_id (0), swap_buf (false), task ([this]() { this->run (); }), cpu_id (cpu_id1)
 {
 
     memset (write_buf.get (), 0x0f, buf_size * sizeof (std::complex<float>));
@@ -76,14 +75,15 @@ void Daq::swap (size_t bid)
     cv.notify_all ();
 }
 
-void Daq::bind_cpu(){
-    int cpu_id=this->cpu_id>=0?this->cpu_id:sched_getcpu();
-    
+void Daq::bind_cpu ()
+{
+    int cpu_id = this->cpu_id >= 0 ? this->cpu_id : sched_getcpu ();
+
     cpu_set_t cpu_set;
     CPU_ZERO (&cpu_set);
     CPU_SET (cpu_id, &cpu_set);
     auto this_tid = task.native_handle ();
-    std::cerr<<"Bind this thread to CPU "<<cpu_id<<std::endl;
+    std::cerr << "Bind this thread to CPU " << cpu_id << std::endl;
     pthread_setaffinity_np (this_tid, sizeof (cpu_set_t), &cpu_set);
 }
 
@@ -112,7 +112,7 @@ std::future<std::tuple<std::complex<float> *, size_t>> Daq::fetch_async ()
 
 void Daq::run ()
 {
-    bind_cpu();
+    bind_cpu ();
     char error_buffer[1024];
     const u_char *packet;
     pcap_pkthdr header;
