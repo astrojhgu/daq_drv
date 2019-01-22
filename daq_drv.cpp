@@ -12,10 +12,11 @@
 #include <fcntl.h> /* For O_* constants */
 #include <algorithm>
 #include <pthread.h>
+#include <sched.h>
 #include "daq_drv.hpp"
 
 
-Daq::Daq (const char *name1, size_t n_raw_ch1, size_t ch_split1, size_t n_chunks1, int cpu_id)
+Daq::Daq (const char *name1, size_t n_raw_ch1, size_t ch_split1, size_t n_chunks1, int cpu_id1)
 : dev_name (name1), n_raw_ch (n_raw_ch1), ch_split (ch_split1), n_chunks (n_chunks1),
   spec_len (n_raw_ch * 4), packet_size (spec_len + ID_SIZE + HEAD_LEN),
   buf_size (n_raw_ch * ch_split * n_chunks),
@@ -31,19 +32,12 @@ Daq::Daq (const char *name1, size_t n_raw_ch1, size_t ch_split1, size_t n_chunks
                                          fd,
                                          buf_size * sizeof (std::complex<float>)),
             unmapper),
-  buf_id (0), swap_buf (false), task ([this]() { this->run (); })
+  buf_id (0), swap_buf (false), task ([this]() { this->run (); }),
+  cpu_id(cpu_id1)
 {
 
     memset (write_buf.get (), 0x0f, buf_size * sizeof (std::complex<float>));
     memset (proc_buf.get (), 0x0f, buf_size * sizeof (std::complex<float>));
-    if (cpu_id >= 0)
-        {
-            cpu_set_t cpu_set;
-            CPU_ZERO (&cpu_set);
-            CPU_SET (cpu_id, &cpu_set);
-            auto this_tid = task.native_handle ();
-            pthread_setaffinity_np (this_tid, sizeof (cpu_set_t), &cpu_set);
-        }
 }
 
 int Daq::init_fd (const char *name)
@@ -82,6 +76,17 @@ void Daq::swap (size_t bid)
     cv.notify_all ();
 }
 
+void Daq::bind_cpu(){
+    int cpu_id=this->cpu_id>=0?this->cpu_id:sched_getcpu();
+    
+    cpu_set_t cpu_set;
+    CPU_ZERO (&cpu_set);
+    CPU_SET (cpu_id, &cpu_set);
+    auto this_tid = task.native_handle ();
+    std::cerr<<"Bind this thread to CPU "<<cpu_id<<std::endl;
+    pthread_setaffinity_np (this_tid, sizeof (cpu_set_t), &cpu_set);
+}
+
 
 std::tuple<std::complex<float> *, size_t> Daq::fetch ()
 {
@@ -107,6 +112,7 @@ std::future<std::tuple<std::complex<float> *, size_t>> Daq::fetch_async ()
 
 void Daq::run ()
 {
+    bind_cpu();
     char error_buffer[1024];
     const u_char *packet;
     pcap_pkthdr header;

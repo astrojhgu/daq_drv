@@ -21,11 +21,12 @@ echo $node
 
 #sudo taskset -a -c 0-7 nice -n -20 ./multi $devs
 #sudo taskset -a -c 8-12 nice -n -20 ./multi $devs
-#sudo numactl -N 1 --localalloc ./multi $devs
+#sudo numactl -N $node --localalloc ./multi $devs
+sudo numactl -N netdev:$dev1 -m netdev:$dev1 ./multi $devs
 #sudo numactl -N 1 --interleave=all ./multi $devs
 
 #sudo taskset -c 8-13 nice -n -20 ./multi ens5f0 ens5f1
 #sudo numactl --localalloc taskset -a -c 8-15 nice -n -20 ./multi $devs
 #sudo  numactl --interleave=all ./multi $devs
 #numactl --localalloc ./multi $devs
-numactl --preferred=netdev:$dev1 ./multi $devs
+#numactl --preferred=netdev:$dev1 ./multi $devs

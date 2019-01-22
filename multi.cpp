@@ -5,8 +5,8 @@
 #include <omp.h>
 using namespace std;
 
-constexpr size_t N_CH = 1024;
-constexpr size_t CH_SPLIT = 8;
+constexpr size_t N_CH = 2048/2;
+constexpr size_t CH_SPLIT = 16;
 constexpr size_t N_CHUNKS = 65536 / CH_SPLIT * 4;
 
 int main (int argc, char *argv[])
@@ -16,14 +16,15 @@ int main (int argc, char *argv[])
             cerr << "Usage: " << argv[0] << " ifnames" << std::endl;
             return -1;
         }
-    omp_set_dynamic (0);
+    omp_set_dynamic (1);
     std::vector<const char *> names;
     std::vector<int> cpu_ids;
     int cpu_id = 0;
     for (int i = 1; i < argc; ++i)
         {
             names.push_back (argv[i]);
-            cpu_ids.push_back ((cpu_id + 8) % 16);
+            //cpu_ids.push_back ((cpu_id + 8) % 16);
+            cpu_ids.push_back (-1);
             cpu_id += 1;
         }
 
@@ -47,13 +48,13 @@ int main (int argc, char *argv[])
             for (size_t i = 0; i < N_CHUNKS; ++i)
                 {
 //#pragma omp parallel for num_threads(4)
-#pragma omp parallel for num_threads(4)
+#pragma omp parallel for num_threads(6)
                     for (size_t j = 0; j < N_CH * CH_SPLIT; ++j)
                         {
                             corr[j] += p1[i * N_CH * CH_SPLIT + j] * p2[i * N_CH * CH_SPLIT + j] / (float)N_CHUNKS;
                         }
                 }
-            std::cout << corr[1004] << std::endl;
+            std::cout << corr[CH_SPLIT/2] << std::endl;
             /*
             for(int j=0;j<N_CH*CH_SPLIT*N_CHUNKS;++j){
                         //x+=std::sqrt(std::norm(p[j]));

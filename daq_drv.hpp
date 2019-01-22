@@ -44,9 +44,10 @@ class Daq
     std::thread task;
     std::mutex mx_cv, mx_swap;
     std::condition_variable cv;
+    int cpu_id;
 
   public:
-    Daq (const char *name1, size_t n_raw_ch1, size_t ch_split1, size_t n_chunks1, int cpu_id = -1);
+    Daq (const char *name1, size_t n_raw_ch1, size_t ch_split1, size_t n_chunks1, int cpu_id1);
     ~Daq ();
 
     int init_fd (const char *name);
@@ -56,6 +57,7 @@ class Daq
     void run ();
     std::tuple<std::complex<float> *, size_t> fetch ();
     std::future<std::tuple<std::complex<float> *, size_t>> fetch_async ();
+    void bind_cpu();
 };
 
 

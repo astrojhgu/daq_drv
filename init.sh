@@ -4,6 +4,7 @@
 ip token|awk '{print $4}'|while read dev;
 do
     dri=`ethtool -i $dev |grep driver|awk '{print $2}'`
+    echo $dri
     if [ $dri == 'ixgbe' ]
     then
 	echo $dev
