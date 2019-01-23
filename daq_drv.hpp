@@ -14,6 +14,8 @@
 #include <tuple>
 #include <vector>
 #include <future>
+#include <fftw3.h>
+#include "bufq.hpp"
 
 // static constexpr size_t N_CH=2048/2;
 // static constexpr size_t SPEC_LEN=N_CH*4;
@@ -23,6 +25,19 @@ static constexpr size_t HEAD_LEN = 42;
 // static constexpr size_t PACKET_SIZE=SPEC_LEN+ID_SIZE+HEAD_LEN;
 // static constexpr size_t N_CHUNKS=65536;
 // static constexpr size_t BUF_SIZE=N_CH*CH_SPLIT*N_CHUNKS;
+
+
+struct MMBuf
+{
+    std::complex<float> *ptr;
+    std::size_t size;
+    std::size_t buf_id;
+    MMBuf () = delete;
+    MMBuf (const MMBuf &) = delete;
+    MMBuf &operator= (const MMBuf &) = delete;
+    MMBuf (std::complex<float> *ptr1, std::size_t size1);
+    ~MMBuf ();
+};
 
 
 class Daq
@@ -35,34 +50,36 @@ class Daq
     const size_t spec_len;
     const size_t packet_size;
     const size_t buf_size;
-    std::function<void(std::complex<float> *)> unmapper;
     int fd;
-    std::unique_ptr<std::complex<float>, std::function<void(std::complex<float> *)>> write_buf;
-    std::unique_ptr<std::complex<float>, std::function<void(std::complex<float> *)>> proc_buf;
-    std::atomic_size_t buf_id;
-    std::atomic_bool swap_buf;
+    BufQ<MMBuf> bufq;
+
     std::thread task;
-    std::mutex mx_cv, mx_swap;
-    std::condition_variable cv;
+
     int cpu_id;
+    std::vector<std::complex<float>> _buf;
+    std::vector<std::complex<float>> _buf_fft;
+    int fft_len[1];
+    //fftwf_plan fft;
 
   public:
     Daq (const char *name1, size_t n_raw_ch1, size_t ch_split1, size_t n_chunks1, int cpu_id1);
     ~Daq ();
 
     int init_fd (const char *name);
+    std::vector<std::shared_ptr<MMBuf>> init_buf ();
 
   public:
-    void swap (size_t bid);
     void run ();
-    std::tuple<std::complex<float> *, size_t> fetch ();
-    std::future<std::tuple<std::complex<float> *, size_t>> fetch_async ();
+    MMBuf *fetch ();
+    std::future<MMBuf *> fetch_async ();
     void bind_cpu ();
+    fftwf_plan init_fft();
 };
 
 
 class DaqPool
 {
+  public:
     std::vector<std::unique_ptr<Daq>> pool;
 
   public:
