@@ -6,7 +6,7 @@
 using namespace std;
 
 constexpr size_t N_CH = 2048 / 2;
-constexpr size_t CH_SPLIT = 8;
+constexpr size_t CH_SPLIT = 16;
 constexpr size_t N_CHUNKS = 65536 / CH_SPLIT * 4;
 
 int main (int argc, char *argv[])

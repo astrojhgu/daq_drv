@@ -159,10 +159,10 @@ void Daq::run ()
     std::ofstream ofs("fft.txt");
     std::ofstream ofs_idx("idx.txt");
     size_t packet_cnt=0;
-    auto func = [&, this](std::shared_ptr<MMBuf> p) {
-        std::vector<std::complex<float>> buf (n_raw_ch * ch_split);
-        std::complex<float> * buf_ptr = p->ptr;
-        
+    
+    std::vector<std::complex<float>> buf (n_raw_ch * ch_split);
+    auto p=bufq.prepare_write_buf().get();
+    std::complex<float> * buf_ptr = p->ptr;
         for (;;)
             {
                 while (1)
@@ -194,7 +194,7 @@ void Daq::run ()
                         // buf_ptr[shift1+shift2+i*ch_split]=pci16[i];
                     }
 
-                if (id / ch_split != (id+1) / ch_split)
+                if (id / ch_split != old_id / ch_split)
                     {
                         auto shift1 = ((id / ch_split) % n_chunks) * ch_split * n_raw_ch;
                         auto buf_fft = buf_ptr + shift1;
@@ -214,22 +214,20 @@ void Daq::run ()
                             }
                         old_stat_id = id;
                     }
-                old_id = id;
+                
                 auto buf_id = id / ch_split / n_chunks;
-                auto next_buf_id = (id + 1) / ch_split / n_chunks;
-                if (buf_id != next_buf_id)
+                auto old_buf_id = old_id / ch_split / n_chunks;
+                if (buf_id != old_buf_id)
                     {
                         //std::cout<<buf_id<<std::endl;
                         p->buf_id = buf_id;
-                        break;
+                        bufq.submit();
+                        p=bufq.prepare_write_buf().get();
+                        buf_ptr=p->ptr;
                     }
+                old_id = id;
             }
-    };
-
-    while(1){
-        bufq.write(func);
-    }
-
+    
 }
 
 DaqPool::DaqPool (const std::vector<const char *> &names,
