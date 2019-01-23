@@ -18,7 +18,7 @@
 #include "daq_drv.hpp"
 
 std::mutex fft_mx;
-
+constexpr size_t qlen=3;
 
 MMBuf::MMBuf (std::complex<float> *ptr1, std::size_t size1) : ptr (ptr1), size (size1), buf_id (0)
 {
@@ -42,22 +42,24 @@ Daq::Daq (const char *name1, size_t n_raw_ch1, size_t ch_split1, size_t n_chunks
 
 std::vector<std::shared_ptr<MMBuf>> Daq::init_buf ()
 {
-    std::vector<std::shared_ptr<MMBuf>> buf{
-        std::make_shared<MMBuf> ((std::complex<float> *)mmap (nullptr, buf_size * sizeof (std::complex<float>),
-                                                              PROT_WRITE | PROT_READ, MAP_SHARED, fd, 0),
-                                 buf_size),
-        std::make_shared<MMBuf> ((std::complex<float> *)mmap (nullptr, buf_size * sizeof (std::complex<float>),
+    std::vector<std::shared_ptr<MMBuf>> buf;
+    
+    for(size_t i=0;i<qlen;++i)
+    {
+    auto
+    p=std::make_shared<MMBuf> ((std::complex<float> *)mmap (nullptr, buf_size * sizeof (std::complex<float>),
                                                               PROT_WRITE | PROT_READ, MAP_SHARED, fd,
-                                                              buf_size * sizeof (std::complex<float>)),
-                                 buf_size)
-    };
+                                                              i*buf_size * sizeof (std::complex<float>)),
+                                 buf_size);
+    buf.push_back(p);
+    }
     return buf;
 }
 
 int Daq::init_fd (const char *name)
 {
     auto fd = shm_open (name, O_RDWR | O_CREAT, 0777);
-    if (ftruncate (fd, buf_size * 2 * sizeof (std::complex<float>)) != 0)
+    if (ftruncate (fd, buf_size * qlen * sizeof (std::complex<float>)) != 0)
         {
             assert (0);
             exit (-1);
