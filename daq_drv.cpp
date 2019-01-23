@@ -18,7 +18,7 @@
 #include "daq_drv.hpp"
 
 std::mutex fft_mx;
-constexpr size_t qlen=3;
+constexpr size_t qlen = 3;
 
 MMBuf::MMBuf (std::complex<float> *ptr1, std::size_t size1) : ptr (ptr1), size (size1), buf_id (0)
 {
@@ -26,8 +26,8 @@ MMBuf::MMBuf (std::complex<float> *ptr1, std::size_t size1) : ptr (ptr1), size (
 
 MMBuf::~MMBuf ()
 {
-    assert(0);
-    std::cout<<"dstr"<<std::endl;
+    assert (0);
+    std::cout << "dstr" << std::endl;
     munmap (ptr, size * sizeof (std::complex<float>));
 }
 
@@ -43,16 +43,15 @@ Daq::Daq (const char *name1, size_t n_raw_ch1, size_t ch_split1, size_t n_chunks
 std::vector<std::shared_ptr<MMBuf>> Daq::init_buf ()
 {
     std::vector<std::shared_ptr<MMBuf>> buf;
-    
-    for(size_t i=0;i<qlen;++i)
-    {
-    auto
-    p=std::make_shared<MMBuf> ((std::complex<float> *)mmap (nullptr, buf_size * sizeof (std::complex<float>),
-                                                              PROT_WRITE | PROT_READ, MAP_SHARED, fd,
-                                                              i*buf_size * sizeof (std::complex<float>)),
-                                 buf_size);
-    buf.push_back(p);
-    }
+
+    for (size_t i = 0; i < qlen; ++i)
+        {
+            auto p = std::make_shared<MMBuf> (
+            (std::complex<float> *)mmap (nullptr, buf_size * sizeof (std::complex<float>), PROT_WRITE | PROT_READ,
+                                         MAP_SHARED, fd, i * buf_size * sizeof (std::complex<float>)),
+            buf_size);
+            buf.push_back (p);
+        }
     return buf;
 }
 
@@ -67,25 +66,27 @@ int Daq::init_fd (const char *name)
     return fd;
 }
 
-fftwf_plan Daq::init_fft(){
-    std::lock_guard<std::mutex> lk(fft_mx);
-    std::cerr<<ch_split<<" "<<n_raw_ch<<std::endl;
+fftwf_plan Daq::init_fft ()
+{
+    std::lock_guard<std::mutex> lk (fft_mx);
+    std::cerr << ch_split << " " << n_raw_ch << std::endl;
     _buf.resize (n_raw_ch * ch_split);
 
     _buf_fft.resize (n_raw_ch * ch_split);
 
     int rank = 1;
     int howmany = n_raw_ch;
-    int fft_len[] = {(int)ch_split};
+    int fft_len[] = { (int)ch_split };
     int idist = ch_split;
     int odist = ch_split;
     int istrid = 1;
     int ostrid = 1;
     int *inembed = fft_len;
     int *onembed = fft_len;
-    auto fft = fftwf_plan_many_dft (rank, fft_len, howmany, reinterpret_cast<fftwf_complex *> (_buf.data ()), inembed,
-                                    istrid, idist, reinterpret_cast<fftwf_complex *> (_buf_fft.data ()),
-                                    onembed, ostrid, odist, FFTW_FORWARD, FFTW_ESTIMATE);
+    auto fft =
+    fftwf_plan_many_dft (rank, fft_len, howmany, reinterpret_cast<fftwf_complex *> (_buf.data ()),
+                         inembed, istrid, idist, reinterpret_cast<fftwf_complex *> (_buf_fft.data ()),
+                         onembed, ostrid, odist, FFTW_FORWARD, FFTW_ESTIMATE);
     /*
     auto fft = fftwf_plan_many_dft (rank, fft_len, howmany, reinterpret_cast<fftwf_complex *> (_buf.data ()), inembed,
                                 istrid, idist, reinterpret_cast<fftwf_complex *> (_buf_fft.data ()),
@@ -127,7 +128,7 @@ std::future<MMBuf *> Daq::fetch_async ()
 void Daq::run ()
 {
     bind_cpu ();
-    auto fft=init_fft();
+    auto fft = init_fft ();
     char error_buffer[1024];
     const u_char *packet;
     pcap_pkthdr header;
@@ -150,86 +151,82 @@ void Daq::run ()
         }
     pcap_activate (cap);
 
-    
+
     size_t old_stat_id = 0;
     size_t old_id = 0;
     // long x=0;
     u_int64_t id = 0;
-    
-    size_t old_shift2=0;
-    //buf_ptr = nullptr;
-    std::ofstream ofs("fft.txt");
-    std::ofstream ofs_idx("idx.txt");
-    size_t packet_cnt=0;
-    
+
+    size_t old_shift2 = 0;
+    // buf_ptr = nullptr;
+    std::ofstream ofs ("fft.txt");
+    std::ofstream ofs_idx ("idx.txt");
+    size_t packet_cnt = 0;
+
     std::vector<std::complex<float>> buf (n_raw_ch * ch_split);
-    auto p=bufq.prepare_write_buf().get();
-    std::complex<float> * buf_ptr = p->ptr;
-        for (;;)
-            {
-                while (1)
-                    {
-                        packet = pcap_next (cap, &header);
-                        if (packet != nullptr && header.len == packet_size)
-                            {
-                                break;
-                            }
-                    }
-                ++packet_cnt;
-                memcpy (&id, packet + 42, 8);
+    auto p = bufq.prepare_write_buf ().get ();
+    std::complex<float> *buf_ptr = p->ptr;
+    for (;;)
+        {
+            while (1)
+                {
+                    packet = pcap_next (cap, &header);
+                    if (packet != nullptr && header.len == packet_size)
+                        {
+                            break;
+                        }
+                }
+            ++packet_cnt;
+            memcpy (&id, packet + 42, 8);
 
-                std::complex<int16_t> *pci16 = (std::complex<int16_t> *)(packet + 50);
+            std::complex<int16_t> *pci16 = (std::complex<int16_t> *)(packet + 50);
 
-                auto shift2 = id % ch_split;
+            auto shift2 = id % ch_split;
 
-                // memcpy(buf.data()+(id%ch_split)*2*n_raw_ch, packet+50, n_raw_ch*4);
-                
-                
-
-                int16_t flip_factor = shift2 % 2 == 0 ? 1 : -1; // for fft shift
-                // int16_t flip_factor=1;
-                for (size_t i = 0; i < n_raw_ch; ++i)
-                    {
-                        assert(pci16[i].real()==1);
-                        assert(pci16[i].imag()==0);
-                        buf[shift2 + i * ch_split] = pci16[i] * flip_factor;
-                        // buf_ptr[shift1+shift2+i*ch_split]=pci16[i];
-                    }
-
-                if (id / ch_split != old_id / ch_split)
-                    {
-                        auto shift1 = ((id / ch_split) % n_chunks) * ch_split * n_raw_ch;
-                        auto buf_fft = buf_ptr + shift1;
-                        fftwf_execute_dft (fft, reinterpret_cast<fftwf_complex *> (buf.data ()),
-                                           reinterpret_cast<fftwf_complex *> (buf_fft));
-                        
-                    }
-                
+            // memcpy(buf.data()+(id%ch_split)*2*n_raw_ch, packet+50, n_raw_ch*4);
 
 
-                if (packet_cnt % 100000 == 0)
-                    {
-                        // std::cout<<id<<" "<< 100000./(id-old_stat_id)<<std::endl;
-                        if (id - old_stat_id != 100000)
-                            {
-                                std::cout << "losting " << id - old_stat_id - 100000 << " packets" << std::endl;
-                            }
-                        old_stat_id = id;
-                    }
-                
-                auto buf_id = id / ch_split / n_chunks;
-                auto old_buf_id = old_id / ch_split / n_chunks;
-                if (buf_id != old_buf_id)
-                    {
-                        //std::cout<<buf_id<<std::endl;
-                        p->buf_id = buf_id;
-                        bufq.submit();
-                        p=bufq.prepare_write_buf().get();
-                        buf_ptr=p->ptr;
-                    }
-                old_id = id;
-            }
-    
+            int16_t flip_factor = shift2 % 2 == 0 ? 1 : -1; // for fft shift
+            // int16_t flip_factor=1;
+            for (size_t i = 0; i < n_raw_ch; ++i)
+                {
+                    assert (pci16[i].real () == 1);
+                    assert (pci16[i].imag () == 0);
+                    buf[shift2 + i * ch_split] = pci16[i] * flip_factor;
+                    // buf_ptr[shift1+shift2+i*ch_split]=pci16[i];
+                }
+
+            if (id / ch_split != old_id / ch_split)
+                {
+                    auto shift1 = ((id / ch_split) % n_chunks) * ch_split * n_raw_ch;
+                    auto buf_fft = buf_ptr + shift1;
+                    fftwf_execute_dft (fft, reinterpret_cast<fftwf_complex *> (buf.data ()),
+                                       reinterpret_cast<fftwf_complex *> (buf_fft));
+                }
+
+
+            if (packet_cnt % 100000 == 0)
+                {
+                    // std::cout<<id<<" "<< 100000./(id-old_stat_id)<<std::endl;
+                    if (id - old_stat_id != 100000)
+                        {
+                            std::cout << "losting " << id - old_stat_id - 100000 << " packets" << std::endl;
+                        }
+                    old_stat_id = id;
+                }
+
+            auto buf_id = id / ch_split / n_chunks;
+            auto old_buf_id = old_id / ch_split / n_chunks;
+            if (buf_id != old_buf_id)
+                {
+                    // std::cout<<buf_id<<std::endl;
+                    p->buf_id = buf_id;
+                    bufq.submit ();
+                    p = bufq.prepare_write_buf ().get ();
+                    buf_ptr = p->ptr;
+                }
+            old_id = id;
+        }
 }
 
 DaqPool::DaqPool (const std::vector<const char *> &names,
@@ -249,10 +246,10 @@ DaqPool::DaqPool (const std::vector<const char *> &names,
 std::tuple<size_t, std::vector<std::complex<float> *>> DaqPool::fetch ()
 {
     auto n = pool.size ();
-    std::vector<MMBuf*> result_list (n, nullptr);
-    
+    std::vector<MMBuf *> result_list (n, nullptr);
 
-    std::vector<std::future<MMBuf*>> futures;
+
+    std::vector<std::future<MMBuf *>> futures;
     for (auto &i : pool)
         {
             futures.push_back (i->fetch_async ());
@@ -263,14 +260,15 @@ std::tuple<size_t, std::vector<std::complex<float> *>> DaqPool::fetch ()
             result_list[i] = futures[i].get ();
         }
 
-    //exit(0);
+    // exit(0);
     while (1)
         {
-            //id_max = *std::max_element (result_list.begin (), result_list.end ());
-            size_t id_max=0;
-            for(auto& i:result_list){
-                id_max=std::max(i->buf_id, id_max);
-            }
+            // id_max = *std::max_element (result_list.begin (), result_list.end ());
+            size_t id_max = 0;
+            for (auto &i : result_list)
+                {
+                    id_max = std::max (i->buf_id, id_max);
+                }
 
             std::vector<size_t> to_be_fetched;
             for (size_t i = 0; i < n; ++i)
@@ -293,10 +291,10 @@ std::tuple<size_t, std::vector<std::complex<float> *>> DaqPool::fetch ()
                 }
         }
 
-    std::vector<std::complex<float>*> buffers(n);
-    for(size_t i=0;i<n;++i)
-    {
-        buffers[i]=result_list[i]->ptr;
-    }
-    return std::make_tuple(result_list[0]->buf_id, buffers);
+    std::vector<std::complex<float> *> buffers (n);
+    for (size_t i = 0; i < n; ++i)
+        {
+            buffers[i] = result_list[i]->ptr;
+        }
+    return std::make_tuple (result_list[0]->buf_id, buffers);
 }

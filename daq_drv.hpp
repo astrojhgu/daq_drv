@@ -59,7 +59,7 @@ class Daq
     std::vector<std::complex<float>> _buf;
     std::vector<std::complex<float>> _buf_fft;
     int fft_len[1];
-    //fftwf_plan fft;
+    // fftwf_plan fft;
 
   public:
     Daq (const char *name1, size_t n_raw_ch1, size_t ch_split1, size_t n_chunks1, int cpu_id1);
@@ -73,7 +73,7 @@ class Daq
     MMBuf *fetch ();
     std::future<MMBuf *> fetch_async ();
     void bind_cpu ();
-    fftwf_plan init_fft();
+    fftwf_plan init_fft ();
 };
 
 
