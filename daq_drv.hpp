@@ -70,8 +70,8 @@ class Daq
 
   public:
     void run ();
-    MMBuf *fetch ();
-    std::future<MMBuf *> fetch_async ();
+    std::shared_ptr<MMBuf> fetch ();
+    std::future<std::shared_ptr<MMBuf>> fetch_async ();
     void bind_cpu ();
     fftwf_plan init_fft ();
 };

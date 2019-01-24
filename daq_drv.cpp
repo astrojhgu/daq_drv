@@ -18,7 +18,7 @@
 #include "daq_drv.hpp"
 
 std::mutex fft_mx;
-constexpr size_t qlen = 3;
+constexpr size_t qlen = 2;
 
 MMBuf::MMBuf (std::complex<float> *ptr1, std::size_t size1) : ptr (ptr1), size (size1), buf_id (0)
 {
@@ -69,7 +69,7 @@ int Daq::init_fd (const char *name)
 fftwf_plan Daq::init_fft ()
 {
     std::lock_guard<std::mutex> lk (fft_mx);
-    std::cerr << ch_split << " " << n_raw_ch << std::endl;
+    
     _buf.resize (n_raw_ch * ch_split);
 
     _buf_fft.resize (n_raw_ch * ch_split);
@@ -115,12 +115,12 @@ void Daq::bind_cpu ()
 }
 
 
-MMBuf *Daq::fetch ()
+std::shared_ptr<MMBuf> Daq::fetch ()
 {
-    return bufq.fetch ().get ();
+    return bufq.fetch ();
 }
 
-std::future<MMBuf *> Daq::fetch_async ()
+std::future<std::shared_ptr<MMBuf>> Daq::fetch_async ()
 {
     return std::async (std::launch::async, [this]() { return this->fetch (); });
 }
@@ -166,6 +166,9 @@ void Daq::run ()
     std::vector<std::complex<float>> buf (n_raw_ch * ch_split);
     auto p = bufq.prepare_write_buf ().get ();
     std::complex<float> *buf_ptr = p->ptr;
+
+    auto now=std::chrono::system_clock::now();
+    size_t byte_count=0;
     for (;;)
         {
             while (1)
@@ -176,6 +179,7 @@ void Daq::run ()
                             break;
                         }
                 }
+            byte_count+=packet_size;
             ++packet_cnt;
             memcpy (&id, packet + 42, 8);
 
@@ -219,6 +223,13 @@ void Daq::run ()
             auto old_buf_id = old_id / ch_split / n_chunks;
             if (buf_id != old_buf_id)
                 {
+                    auto now1=std::chrono::system_clock::now();
+                    std::chrono::duration<double> dur=now1-now;
+                    auto dt=dur.count();
+                    auto MBps=byte_count/1e6/dt;
+                    std::cerr<<"dt="<<dt<<" rate= "<<MBps<<" MBps"<<std::endl;
+                    now=now1;
+                    byte_count=0;            
                     // std::cout<<buf_id<<std::endl;
                     p->buf_id = buf_id;
                     bufq.submit ();
@@ -246,10 +257,10 @@ DaqPool::DaqPool (const std::vector<const char *> &names,
 std::tuple<size_t, std::vector<std::complex<float> *>> DaqPool::fetch ()
 {
     auto n = pool.size ();
-    std::vector<MMBuf *> result_list (n, nullptr);
+    std::vector<std::shared_ptr<MMBuf>> result_list (n, nullptr);
 
 
-    std::vector<std::future<MMBuf *>> futures;
+    std::vector<std::future<std::shared_ptr<MMBuf>>> futures;
     for (auto &i : pool)
         {
             futures.push_back (i->fetch_async ());

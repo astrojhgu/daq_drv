@@ -6,7 +6,7 @@
 using namespace std;
 
 constexpr size_t N_CH = 2048 / 2;
-constexpr size_t CH_SPLIT = 16;
+constexpr size_t CH_SPLIT = 32;
 constexpr size_t N_CHUNKS = 65536 / CH_SPLIT * 4;
 
 int main (int argc, char *argv[])
@@ -29,12 +29,15 @@ int main (int argc, char *argv[])
         }
 
     DaqPool pool (names, N_CH, CH_SPLIT, N_CHUNKS, cpu_ids);
-
+    size_t old_id=0;
     while (1)
         {
+            //std::this_thread::sleep_for(std::chrono::seconds(3));
             // std::this_thread::sleep_for(5s);
             auto data = pool.fetch ();
-            std::cout << "fetched " << std::get<0> (data) << std::endl;
+            auto id=std::get<0> (data);
+            std::cout << "fetched " << id <<" skipped "<<id-old_id-1<< std::endl;
+            old_id=id;
             ;
             // continue;
             /*
