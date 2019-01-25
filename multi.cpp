@@ -5,8 +5,9 @@
 #include <omp.h>
 using namespace std;
 
-constexpr size_t N_CH = 2048 / 2;
+constexpr size_t N_RAW_CH = 2048 / 2;
 constexpr size_t CH_SPLIT = 32;
+constexpr size_t N_CH=N_RAW_CH*CH_SPLIT;
 constexpr size_t N_CHUNKS = 65536 / CH_SPLIT * 4;
 
 int main (int argc, char *argv[])
@@ -28,7 +29,7 @@ int main (int argc, char *argv[])
             cpu_id += 1;
         }
 
-    DaqPool pool (names, N_CH, CH_SPLIT, N_CHUNKS, cpu_ids);
+    DaqPool pool (names, N_RAW_CH, CH_SPLIT, N_CHUNKS, cpu_ids);
     size_t old_id=0;
     while (1)
         {
@@ -46,19 +47,25 @@ int main (int argc, char *argv[])
             }
             std::cout<<std::endl;
             */
-            vector<std::complex<float>> corr (N_CH * CH_SPLIT);
+            vector<std::complex<float>> corr (N_CH);
             auto p1 = std::get<1> (data)[0];
             auto p2 = std::get<1> (data)[1];
+
+            
             for (size_t i = 0; i < N_CHUNKS; ++i)
                 {
 #pragma omp parallel for num_threads(4)
                     //#pragma omp parallel for num_threads(6)
-                    for (size_t j = 0; j < N_CH * CH_SPLIT; ++j)
+                    for (size_t j = 0; j < N_CH; ++j)
                         {
-                            corr[j] += p1[i * N_CH * CH_SPLIT + j] *
-                                       std::conj (p2[i * N_CH * CH_SPLIT + j]) / (float)N_CHUNKS;
+                            corr[j] += p1[i * N_CH + j] *
+                                       std::conj (p2[i * N_CH + j]) / (float)N_CHUNKS;
                         }
+                    
                 }
+
+
+            //std::cout<<p1[CH_SPLIT/2+CH_SPLIT]<<std::endl;;
             std::cout << corr[CH_SPLIT / 2] << std::endl;
             /*
             for(int j=0;j<N_CH*CH_SPLIT*N_CHUNKS;++j){
