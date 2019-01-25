@@ -1,17 +1,27 @@
 CXX=g++
+TARGETS=single multi
 
-all: multi run libdaq_drv.so
-run: main.cpp daq_drv.cpp
-	$(CXX) $^ -o $@ -O3 -lpcap -lfftw3f -lrt -march=native -pthread -fopenmp
+all: $(TARGETS)
+LIBS=-lpcap -lfftw3f -lrt
+LDFLAGS=$(LIBS) -pthread -fopenmp -O3
+CXXFLAGS=-march=native -fopenmp -ffast-math -Wall -O3
 
-multi: multi.cpp daq_drv.cpp
-	$(CXX) $^ -g -o $@ -O3 -lpcap -lfftw3f -lrt -march=native -pthread -fopenmp -ffast-math -Wall
+daq_drv.o: daq_drv.cpp
+	$(CXX) -c $< -g -o $@ $(CXXFLAGS)
 
-multi2: multi2.cpp daq_drv.cpp
-	$(CXX) $^ -g -o $@ -O3 -lpcap -lfftw3f -lrt -march=native -pthread -fopenmp -ffast-math -Wall
+single.o: single.cpp
+	$(CXX) -c $< -g -o $@ $(CXXFLAGS)
 
-libdaq_drv.so: daq_drv.cpp
-	$(CXX) -fPIC --shared -O3 $< -o $@
+multi.o: multi.cpp
+	$(CXX) -c $< -g -o $@ $(CXXFLAGS)
+
+
+single: single.o daq_drv.o
+	$(CXX) $^ -g -o $@ -O3  $(LDFLAGS)
+
+
+multi: multi.o daq_drv.o
+	$(CXX) $^ -g -o $@ -O3  $(LDFLAGS)
 
 clean:
-	rm -f run multi2 multi
+	rm -f $(TARGETS) *.o
