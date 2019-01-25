@@ -6,13 +6,13 @@ LIBS=-lpcap -lfftw3f -lrt
 LDFLAGS=$(LIBS) -pthread -fopenmp -O3
 CXXFLAGS=-march=native -fopenmp -ffast-math -Wall -O3
 
-daq_drv.o: daq_drv.cpp
+daq_drv.o: daq_drv.cpp daq_drv.hpp bufq.hpp
 	$(CXX) -c $< -g -o $@ $(CXXFLAGS)
 
-single.o: single.cpp
+single.o: single.cpp daq_drv.hpp
 	$(CXX) -c $< -g -o $@ $(CXXFLAGS)
 
-multi.o: multi.cpp
+multi.o: multi.cpp daq_drv.hpp
 	$(CXX) -c $< -g -o $@ $(CXXFLAGS)
 
 
