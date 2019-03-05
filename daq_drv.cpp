@@ -19,6 +19,7 @@
 
 std::mutex fft_mx;
 constexpr size_t qlen = 2;
+constexpr uint64_t ID_MASK = (((uint64_t)1 << 42) - 1);
 
 MMBuf::MMBuf (std::complex<float> *ptr1, std::size_t size1) : ptr (ptr1), size (size1), buf_id (0)
 {
@@ -155,9 +156,9 @@ void Daq::run ()
     size_t old_stat_id = 0;
     size_t old_id = 0;
     // long x=0;
-    u_int64_t id = 0;
+    uint64_t id = 0;
 
-    size_t old_shift2 = 0;
+    //size_t old_shift2 = 0;
     // buf_ptr = nullptr;
     std::ofstream ofs ("fft.txt");
     std::ofstream ofs_idx ("idx.txt");
@@ -182,6 +183,7 @@ void Daq::run ()
             byte_count+=packet_size;
             ++packet_cnt;
             memcpy (&id, packet + 42, 8);
+            id&=ID_MASK;
 
             std::complex<int16_t> *pci16 = (std::complex<int16_t> *)(packet + 50);
 

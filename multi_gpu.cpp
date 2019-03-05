@@ -70,7 +70,7 @@ int main (int argc, char *argv[])
             {
                 gpuErrchk(cudaMemcpy((void*)(input_data+INPUT_LENGTH_ONE*i), (void*)(std::get<1> (data)[i]), INPUT_LENGTH_ONE*sizeof(float)*2, cudaMemcpyHostToDevice));
                 auto p = std::get<1> (data)[i];
-                std::cout<<p[CH_SPLIT/2]<<std::endl;
+                //std::cout<<p[CH_SPLIT/2]<<std::endl;
             }
 
             gpuErrchk(cudaMemset(output_data, 0, OUTPUT_LENGTH*sizeof(float)*2));
