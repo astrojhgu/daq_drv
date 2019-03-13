@@ -11,7 +11,7 @@ int main (int argc, char *argv[])
             exit (0);
         }
 
-    Daq daq (argv[1], 1024, 16, 65536 * 4 / 16, -1);
+    Daq daq (argv[1], 1024, 8, 65536 * 4 / 16, -1);
     while (1)
         {
             auto mmb = daq.fetch ();

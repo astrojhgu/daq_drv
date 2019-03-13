@@ -1,5 +1,5 @@
-CXX=g++
-TARGETS=single multi multi_gpu
+CXX=g++-8
+TARGETS=single multi #multi_gpu
 
 all: $(TARGETS)
 INC=-I /usr/local/cuda/include

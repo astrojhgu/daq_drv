@@ -196,8 +196,8 @@ void Daq::run ()
             // int16_t flip_factor=1;
             for (size_t i = 0; i < n_raw_ch; ++i)
                 {
-                    assert (pci16[i].real () == 1);
-                    assert (pci16[i].imag () == 0);
+		  //assert (pci16[i].real () == 1);
+                  //  assert (pci16[i].imag () == 0);
                     buf[shift2 + i * ch_split] = pci16[i] * flip_factor;
                     // buf_ptr[shift1+shift2+i*ch_split]=pci16[i];
                 }
