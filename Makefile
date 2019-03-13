@@ -1,4 +1,4 @@
-CXX=g++-8
+CXX=g++
 TARGETS=single multi #multi_gpu
 
 all: $(TARGETS)
