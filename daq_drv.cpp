@@ -206,8 +206,16 @@ void Daq::run ()
                 {
                     auto shift1 = ((id / ch_split) % n_chunks) * ch_split * n_raw_ch;
                     auto buf_fft = buf_ptr + shift1;
-                    fftwf_execute_dft (fft, reinterpret_cast<fftwf_complex *> (buf.data ()),
-                                       reinterpret_cast<fftwf_complex *> (buf_fft));
+		    
+		    if(ch_split!=1){
+		      fftwf_execute_dft (fft, reinterpret_cast<fftwf_complex *> (buf.data ()),
+					 reinterpret_cast<fftwf_complex *> (buf_fft));
+		    }else{
+		      for(size_t i=0;i<buf.size();++i){
+			buf_fft[i]=buf[i];
+		      }
+		    }
+		    
                 }
 
 
