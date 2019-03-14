@@ -20,6 +20,8 @@
 std::mutex fft_mx;
 constexpr size_t qlen = 2;
 constexpr uint64_t ID_MASK = (((uint64_t)1 << 42) - 1);
+constexpr size_t average_cnt=60000*3;
+constexpr float mean_k=(average_cnt-1.0)/average_cnt;
 
 MMBuf::MMBuf (std::complex<float> *ptr1, std::size_t size1) : ptr (ptr1), size (size1), buf_id (0)
 {
@@ -36,7 +38,7 @@ MMBuf::~MMBuf ()
 Daq::Daq (const char *name1, size_t n_raw_ch1, size_t ch_split1, size_t n_chunks1, int cpu_id1)
 : dev_name (name1), n_raw_ch (n_raw_ch1), ch_split (ch_split1), n_chunks (n_chunks1),
   spec_len (n_raw_ch * 4), packet_size (spec_len + ID_SIZE + HEAD_LEN),
-  buf_size (n_raw_ch * ch_split * n_chunks), fd (init_fd (name1)), bufq (init_buf ()),
+  buf_size (n_raw_ch * ch_split * n_chunks), raw_ch_beg(-1), raw_ch_end(-1), fd (init_fd (name1)), bufq (init_buf ()),
   task ([this]() { this->run (); }), cpu_id (cpu_id1)
 {
 }
@@ -165,6 +167,7 @@ void Daq::run ()
     size_t packet_cnt = 0;
 
     std::vector<std::complex<float>> buf (n_raw_ch * ch_split);
+    std::vector<std::complex<float>> mean_buf(n_raw_ch);
     auto p = bufq.prepare_write_buf ().get ();
     std::complex<float> *buf_ptr = p->ptr;
 
@@ -183,7 +186,17 @@ void Daq::run ()
             byte_count+=packet_size;
             ++packet_cnt;
             memcpy (&id, packet + 42, 8);
-            id&=ID_MASK;
+
+	    uint64_t ch_bytes=id>>42;
+	    int ch_last=ch_bytes>>11;
+	    int ch_first=ch_bytes-(ch_last<<11);
+	    if(raw_ch_beg!=ch_first || raw_ch_end!=ch_last+1){
+	      std::cerr<<"WARNING: ch changed from ("<<raw_ch_beg<<" , "<<raw_ch_end<<" ) to";
+	      raw_ch_beg=ch_first;
+	      raw_ch_end=ch_last+1;
+	      std::cerr<<" ("<<raw_ch_beg<<" , "<<raw_ch_end<<std::endl;
+	    }
+	    id&=ID_MASK;
 
             std::complex<int16_t> *pci16 = (std::complex<int16_t> *)(packet + 50);
 
@@ -192,13 +205,14 @@ void Daq::run ()
             // memcpy(buf.data()+(id%ch_split)*2*n_raw_ch, packet+50, n_raw_ch*4);
 
 
-            int16_t flip_factor = shift2 % 2 == 0 ? 1 : -1; // for fft shift
+            float flip_factor = shift2 % 2 == 0 ? 1 : -1; // for fft shift
             // int16_t flip_factor=1;
             for (size_t i = 0; i < n_raw_ch; ++i)
                 {
 		  //assert (pci16[i].real () == 1);
                   //  assert (pci16[i].imag () == 0);
-                    buf[shift2 + i * ch_split] = pci16[i] * flip_factor;
+		  buf[shift2 + i * ch_split] = (std::complex<float>(pci16[i].real(), pci16[i].imag())-mean_buf[i]) * flip_factor;
+		    mean_buf[i]=mean_buf[i]*mean_k+(1.0f-mean_k)*std::complex<float>(pci16[i].real(), pci16[i].imag());
                     // buf_ptr[shift1+shift2+i*ch_split]=pci16[i];
                 }
 
@@ -264,7 +278,7 @@ DaqPool::DaqPool (const std::vector<const char *> &names,
         }
 }
 
-std::tuple<size_t, std::vector<std::complex<float> *>> DaqPool::fetch ()
+std::tuple<size_t, std::vector<std::complex<float> *>, size_t, size_t> DaqPool::fetch ()
 {
     auto n = pool.size ();
     std::vector<std::shared_ptr<MMBuf>> result_list (n, nullptr);
@@ -317,5 +331,5 @@ std::tuple<size_t, std::vector<std::complex<float> *>> DaqPool::fetch ()
         {
             buffers[i] = result_list[i]->ptr;
         }
-    return std::make_tuple (result_list[0]->buf_id, buffers);
+    return std::make_tuple (result_list[0]->buf_id, buffers, pool[0]->raw_ch_beg, pool[0]->raw_ch_end);
 }

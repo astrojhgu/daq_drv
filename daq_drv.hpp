@@ -50,6 +50,8 @@ class Daq
     const size_t spec_len;
     const size_t packet_size;
     const size_t buf_size;
+  size_t raw_ch_beg;
+  size_t raw_ch_end;
     int fd;
     BufQ<MMBuf> bufq;
 
@@ -89,7 +91,7 @@ class DaqPool
              size_t n_chunks,
              const std::vector<int> &cpu_ids);
 
-    std::tuple<size_t, std::vector<std::complex<float> *>> fetch ();
+  std::tuple<size_t, std::vector<std::complex<float> *>, size_t, size_t> fetch ();
 };
 
 #endif
