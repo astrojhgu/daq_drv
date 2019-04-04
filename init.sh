@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 #sudo modprobe netmap
 ip token|awk '{print $4}'|while read dev;

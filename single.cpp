@@ -63,10 +63,10 @@ int main (int argc, char *argv[])
                     for (size_t j = 0; j < N_CH; ++j)
                         {
 			  
-                            corr[j] += ptr[i * N_CH + j] *
+			  //corr[j] += ptr[i * N_CH + j] *
                                        std::conj (ptr[i * N_CH + j]) / (float)N_CHUNKS;
 			  
-			    //corr[j]+=ptr[i*N_CH+j].real();
+			    corr[j]+=ptr[i*N_CH+j].real();
                         }
                     
                 }

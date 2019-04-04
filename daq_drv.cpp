@@ -20,8 +20,27 @@
 std::mutex fft_mx;
 constexpr size_t qlen = 2;
 constexpr uint64_t ID_MASK = (((uint64_t)1 << 42) - 1);
-constexpr size_t average_cnt=60000*3;
-constexpr float mean_k=(average_cnt-1.0)/average_cnt;
+constexpr size_t average_cnt=6000000*3;
+#if 1
+constexpr float mean_k_init=0.0f;
+constexpr float mean_k_final=(average_cnt-1.0)/average_cnt;
+constexpr float mean_k_rate=1e-6;
+#else
+constexpr float mean_k_init=1.0f;
+constexpr float mean_k_final=1.0f;
+constexpr float mean_k_rate=0.0f;
+
+#endif
+
+void update_mean_k(float& mean_k){
+  mean_k-=(mean_k-mean_k_final)*mean_k_rate;
+}
+
+inline void flip_byte_order(std::complex<int16_t>& c){
+  char* p=(char*)&c;
+  std::swap(p[0],p[1]);
+  std::swap(p[2],p[3]);
+}
 
 MMBuf::MMBuf (std::complex<float> *ptr1, std::size_t size1) : ptr (ptr1), size (size1), buf_id (0)
 {
@@ -39,7 +58,7 @@ Daq::Daq (const char *name1, size_t n_raw_ch1, size_t ch_split1, size_t n_chunks
 : dev_name (name1), n_raw_ch (n_raw_ch1), ch_split (ch_split1), n_chunks (n_chunks1),
   spec_len (n_raw_ch * 4), packet_size (spec_len + ID_SIZE + HEAD_LEN),
   buf_size (n_raw_ch * ch_split * n_chunks), raw_ch_beg(-1), raw_ch_end(-1), fd (init_fd (name1)), bufq (init_buf ()),
-  task ([this]() { this->run (); }), cpu_id (cpu_id1)
+  task ([this]() { this->run (); }), cpu_id (cpu_id1),mean_k(mean_k_init)
 {
 }
 
@@ -211,10 +230,18 @@ void Daq::run ()
                 {
 		  //assert (pci16[i].real () == 1);
                   //  assert (pci16[i].imag () == 0);
+		  //flip_byte_order(pci16[i]);
 		  buf[shift2 + i * ch_split] = (std::complex<float>(pci16[i].real(), pci16[i].imag())-mean_buf[i]) * flip_factor;
-		    mean_buf[i]=mean_buf[i]*mean_k+(1.0f-mean_k)*std::complex<float>(pci16[i].real(), pci16[i].imag());
+		  mean_buf[i]=mean_buf[i]*mean_k+(1.0f-mean_k)*std::complex<float>(pci16[i].real(), pci16[i].imag());
+		  //mean_buf[i]=0.0f;
                     // buf_ptr[shift1+shift2+i*ch_split]=pci16[i];
+		  
+		  if (id%100000==0){
+		    //std::cerr<<mean_k<<" "<<mean_buf[i]<<std::endl;
+		    }
+		  
                 }
+	    update_mean_k(mean_k);
 
             if (id / ch_split != old_id / ch_split)
                 {
