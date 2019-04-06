@@ -17,20 +17,15 @@
 #include <sched.h>
 #include "daq_drv.hpp"
 
+#define CENTRALIZE 1
+
 std::mutex fft_mx;
 constexpr size_t qlen = 2;
 constexpr uint64_t ID_MASK = (((uint64_t)1 << 42) - 1);
-constexpr size_t average_cnt=6000000*3;
-#if 1
+constexpr size_t average_cnt=60000000*3;
 constexpr float mean_k_init=0.0f;
 constexpr float mean_k_final=(average_cnt-1.0)/average_cnt;
-constexpr float mean_k_rate=1e-6;
-#else
-constexpr float mean_k_init=1.0f;
-constexpr float mean_k_final=1.0f;
-constexpr float mean_k_rate=0.0f;
-
-#endif
+constexpr float mean_k_rate=1e-3;
 
 void update_mean_k(float& mean_k){
   mean_k-=(mean_k-mean_k_final)*mean_k_rate;
@@ -231,16 +226,28 @@ void Daq::run ()
 		  //assert (pci16[i].real () == 1);
                   //  assert (pci16[i].imag () == 0);
 		  //flip_byte_order(pci16[i]);
+#ifdef CENTRALIZE
+#warning centralization is turned on
 		  buf[shift2 + i * ch_split] = (std::complex<float>(pci16[i].real(), pci16[i].imag())-mean_buf[i]) * flip_factor;
+#else 
+#warning centralization is turned off
+		  buf[shift2 + i * ch_split] = (std::complex<float>(pci16[i].real(), pci16[i].imag())) * flip_factor;
+#endif
 		  mean_buf[i]=mean_buf[i]*mean_k+(1.0f-mean_k)*std::complex<float>(pci16[i].real(), pci16[i].imag());
-		  //mean_buf[i]=0.0f;
                     // buf_ptr[shift1+shift2+i*ch_split]=pci16[i];
 		  
-		  if (id%100000==0){
-		    //std::cerr<<mean_k<<" "<<mean_buf[i]<<std::endl;
-		    }
-		  
                 }
+	    
+	    if (id%1000000==0){
+	      std::complex<float> s=0.0;
+	      for (auto x:mean_buf){
+		s+=x;
+	      }
+	      s/=(float)mean_buf.size();
+	      std::cerr<<mean_k<<" "<<s<<std::endl;
+	    }
+	    
+
 	    update_mean_k(mean_k);
 
             if (id / ch_split != old_id / ch_split)
