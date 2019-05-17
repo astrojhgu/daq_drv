@@ -10,7 +10,7 @@ using namespace std;
 constexpr size_t N_RAW_CH = 2048 / 2;
 constexpr size_t CH_SPLIT = 1;
 constexpr size_t N_CH=N_RAW_CH*CH_SPLIT;
-constexpr size_t N_CHUNKS = 65536 / CH_SPLIT * 4;
+constexpr size_t N_CHUNKS = 32768 / CH_SPLIT * 4;
 constexpr double dnu=250.0/2048.0/CH_SPLIT;
 int main (int argc, char *argv[])
 {
@@ -42,7 +42,7 @@ int main (int argc, char *argv[])
             std::cout << "fetched " << id <<" skipped "<<id-old_id-1<< std::endl;
             old_id=id;
 	    int raw_ch_beg=std::get<2>(data);
-	    int raw_ch_end=std::get<3>(data);
+	    //int raw_ch_end=std::get<3>(data);
 	    double freq_min=250/2048.*raw_ch_beg-dnu*CH_SPLIT/2;
             
             // continue;
@@ -63,8 +63,7 @@ int main (int argc, char *argv[])
                     for (size_t j = 0; j < N_CH; ++j)
                         {
 			  
-			  corr[j] += ptr[i * N_CH + j] *
-                                       std::conj (ptr[i * N_CH + j]) / (float)N_CHUNKS;
+			  corr[j] += ptr[i * N_CH + j] * std::conj (ptr[i * N_CH + j]) / (float)N_CHUNKS;
 			  
 			  //corr[j]+=ptr[i*N_CH+j].real()/(float)N_CHUNKS;
                         }

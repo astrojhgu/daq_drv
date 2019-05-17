@@ -42,7 +42,7 @@ int main (int argc, char *argv[])
             std::cout << "fetched " << id <<" skipped "<<id-old_id-1<< std::endl;
             old_id=id;
 	    int raw_ch_beg=std::get<2>(data);
-	    int raw_ch_end=std::get<3>(data);
+	    //int raw_ch_end=std::get<3>(data);
 	    double freq_min=250/2048.*raw_ch_beg-dnu*CH_SPLIT/2;
 
             ;

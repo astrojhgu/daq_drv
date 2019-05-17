@@ -204,7 +204,7 @@ void Daq::run ()
 	    uint64_t ch_bytes=id>>42;
 	    int ch_last=ch_bytes>>11;
 	    int ch_first=ch_bytes-(ch_last<<11);
-	    if(raw_ch_beg!=ch_first || raw_ch_end!=ch_last+1){
+	    if((int)raw_ch_beg!=ch_first || (int)raw_ch_end!=ch_last+1){
 	      std::cerr<<"WARNING: ch changed from ("<<raw_ch_beg<<" , "<<raw_ch_end<<" ) to";
 	      raw_ch_beg=ch_first;
 	      raw_ch_end=ch_last+1;
@@ -244,7 +244,7 @@ void Daq::run ()
 		s+=x;
 	      }
 	      s/=(float)mean_buf.size();
-	      std::cerr<<mean_k<<" "<<s<<std::endl;
+	      std::cerr<<"mean_k="<<mean_k<<" "<<s<<std::endl;
 	    }
 	    
 

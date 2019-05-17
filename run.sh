@@ -23,7 +23,7 @@ echo $node
 #sudo taskset -a -c 0-7 nice -n -20 ./multi $devs
 #sudo taskset -a -c 8-12 nice -n -20 ./multi $devs
 #sudo numactl -N $node --localalloc ./multi_gpu $devs
-sudo numactl -N $node ./single eth2
+sudo numactl -N $node ./single eth1
 #sudo numactl -N netdev:$dev1 --localalloc ./multi $devs
 #sudo numactl -N $node --interleave=all ./multi $devs
 
