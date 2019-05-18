@@ -3,6 +3,7 @@ with import <nixpkgs> {};
 stdenv.mkDerivation {
     name = "daq_drv"; # Probably put a more meaningful name here
     buildInputs = [fftwFloat
+    clang-tools
     libpcap
     ];
     hardeningDisable = [ "all" ];

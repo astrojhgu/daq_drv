@@ -37,3 +37,6 @@ multi_gpu:multi_gpu.o daq_drv.o gpu_corr.a
 
 clean:
 	rm -f $(TARGETS) *.o gpu_corr.a 
+
+format:
+	clang-format -style=file -i *.hpp *.cpp

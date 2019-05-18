@@ -22,19 +22,21 @@
 std::mutex fft_mx;
 constexpr size_t qlen = 2;
 constexpr uint64_t ID_MASK = (((uint64_t)1 << 42) - 1);
-constexpr size_t average_cnt=60000000*3;
-constexpr float mean_k_init=0.0f;
-constexpr float mean_k_final=(average_cnt-1.0)/average_cnt;
-constexpr float mean_k_rate=1e-3;
+constexpr size_t average_cnt = 60000000 * 3;
+constexpr float mean_k_init = 0.0f;
+constexpr float mean_k_final = (average_cnt - 1.0) / average_cnt;
+constexpr float mean_k_rate = 1e-3;
 
-void update_mean_k(float& mean_k){
-  mean_k-=(mean_k-mean_k_final)*mean_k_rate;
+void update_mean_k (float &mean_k)
+{
+    mean_k -= (mean_k - mean_k_final) * mean_k_rate;
 }
 
-inline void flip_byte_order(std::complex<int16_t>& c){
-  char* p=(char*)&c;
-  std::swap(p[0],p[1]);
-  std::swap(p[2],p[3]);
+inline void flip_byte_order (std::complex<int16_t> &c)
+{
+    char *p = (char *)&c;
+    std::swap (p[0], p[1]);
+    std::swap (p[2], p[3]);
 }
 
 MMBuf::MMBuf (std::complex<float> *ptr1, std::size_t size1) : ptr (ptr1), size (size1), buf_id (0)
@@ -52,8 +54,8 @@ MMBuf::~MMBuf ()
 Daq::Daq (const char *name1, size_t n_raw_ch1, size_t ch_split1, size_t n_chunks1, int cpu_id1)
 : dev_name (name1), n_raw_ch (n_raw_ch1), ch_split (ch_split1), n_chunks (n_chunks1),
   spec_len (n_raw_ch * 4), packet_size (spec_len + ID_SIZE + HEAD_LEN),
-  buf_size (n_raw_ch * ch_split * n_chunks), raw_ch_beg(-1), raw_ch_end(-1), fd (init_fd (name1)), bufq (init_buf ()),
-  task ([this]() { this->run (); }), cpu_id (cpu_id1),mean_k(mean_k_init)
+  buf_size (n_raw_ch * ch_split * n_chunks), raw_ch_beg (-1), raw_ch_end (-1), fd (init_fd (name1)),
+  bufq (init_buf ()), task ([this]() { this->run (); }), cpu_id (cpu_id1), mean_k (mean_k_init)
 {
 }
 
@@ -86,7 +88,7 @@ int Daq::init_fd (const char *name)
 fftwf_plan Daq::init_fft ()
 {
     std::lock_guard<std::mutex> lk (fft_mx);
-    
+
     _buf.resize (n_raw_ch * ch_split);
 
     _buf_fft.resize (n_raw_ch * ch_split);
@@ -174,19 +176,19 @@ void Daq::run ()
     // long x=0;
     uint64_t id = 0;
 
-    //size_t old_shift2 = 0;
+    // size_t old_shift2 = 0;
     // buf_ptr = nullptr;
     std::ofstream ofs ("fft.txt");
     std::ofstream ofs_idx ("idx.txt");
     size_t packet_cnt = 0;
 
     std::vector<std::complex<float>> buf (n_raw_ch * ch_split);
-    std::vector<std::complex<float>> mean_buf(n_raw_ch);
+    std::vector<std::complex<float>> mean_buf (n_raw_ch);
     auto p = bufq.prepare_write_buf ().get ();
     std::complex<float> *buf_ptr = p->ptr;
 
-    auto now=std::chrono::system_clock::now();
-    size_t byte_count=0;
+    auto now = std::chrono::system_clock::now ();
+    size_t byte_count = 0;
     for (;;)
         {
             while (1)
@@ -197,20 +199,21 @@ void Daq::run ()
                             break;
                         }
                 }
-            byte_count+=packet_size;
+            byte_count += packet_size;
             ++packet_cnt;
             memcpy (&id, packet + 42, 8);
 
-	    uint64_t ch_bytes=id>>42;
-	    int ch_last=ch_bytes>>11;
-	    int ch_first=ch_bytes-(ch_last<<11);
-	    if((int)raw_ch_beg!=ch_first || (int)raw_ch_end!=ch_last+1){
-	      std::cerr<<"WARNING: ch changed from ("<<raw_ch_beg<<" , "<<raw_ch_end<<" ) to";
-	      raw_ch_beg=ch_first;
-	      raw_ch_end=ch_last+1;
-	      std::cerr<<" ("<<raw_ch_beg<<" , "<<raw_ch_end<<std::endl;
-	    }
-	    id&=ID_MASK;
+            uint64_t ch_bytes = id >> 42;
+            int ch_last = ch_bytes >> 11;
+            int ch_first = ch_bytes - (ch_last << 11);
+            if ((int)raw_ch_beg != ch_first || (int)raw_ch_end != ch_last + 1)
+                {
+                    std::cerr << "WARNING: ch changed from (" << raw_ch_beg << " , " << raw_ch_end << " ) to";
+                    raw_ch_beg = ch_first;
+                    raw_ch_end = ch_last + 1;
+                    std::cerr << " (" << raw_ch_beg << " , " << raw_ch_end << std::endl;
+                }
+            id &= ID_MASK;
 
             std::complex<int16_t> *pci16 = (std::complex<int16_t> *)(packet + 50);
 
@@ -223,47 +226,54 @@ void Daq::run ()
             // int16_t flip_factor=1;
             for (size_t i = 0; i < n_raw_ch; ++i)
                 {
-		  //assert (pci16[i].real () == 1);
-                  //  assert (pci16[i].imag () == 0);
-		  //flip_byte_order(pci16[i]);
+                    // assert (pci16[i].real () == 1);
+                    //  assert (pci16[i].imag () == 0);
+                    // flip_byte_order(pci16[i]);
 #ifdef CENTRALIZE
 #warning centralization is turned on
-		  buf[shift2 + i * ch_split] = (std::complex<float>(pci16[i].real(), pci16[i].imag())-mean_buf[i]) * flip_factor;
-#else 
+                    buf[shift2 + i * ch_split] =
+                    (std::complex<float> (pci16[i].real (), pci16[i].imag ()) - mean_buf[i]) * flip_factor;
+#else
 #warning centralization is turned off
-		  buf[shift2 + i * ch_split] = (std::complex<float>(pci16[i].real(), pci16[i].imag())) * flip_factor;
+                    buf[shift2 + i * ch_split] =
+                    (std::complex<float> (pci16[i].real (), pci16[i].imag ())) * flip_factor;
 #endif
-		  mean_buf[i]=mean_buf[i]*mean_k+(1.0f-mean_k)*std::complex<float>(pci16[i].real(), pci16[i].imag());
+                    mean_buf[i] = mean_buf[i] * mean_k +
+                                  (1.0f - mean_k) * std::complex<float> (pci16[i].real (), pci16[i].imag ());
                     // buf_ptr[shift1+shift2+i*ch_split]=pci16[i];
-		  
                 }
-	    
-	    if (id%1000000==0){
-	      std::complex<float> s=0.0;
-	      for (auto x:mean_buf){
-		s+=x;
-	      }
-	      s/=(float)mean_buf.size();
-	      std::cerr<<"mean_k="<<mean_k<<" "<<s<<std::endl;
-	    }
-	    
 
-	    update_mean_k(mean_k);
+            if (id % 1000000 == 0)
+                {
+                    std::complex<float> s = 0.0;
+                    for (auto x : mean_buf)
+                        {
+                            s += x;
+                        }
+                    s /= (float)mean_buf.size ();
+                    std::cerr << "mean_k=" << mean_k << " " << s << std::endl;
+                }
+
+
+            update_mean_k (mean_k);
 
             if (id / ch_split != old_id / ch_split)
                 {
                     auto shift1 = ((id / ch_split) % n_chunks) * ch_split * n_raw_ch;
                     auto buf_fft = buf_ptr + shift1;
-		    
-		    if(ch_split!=1){
-		      fftwf_execute_dft (fft, reinterpret_cast<fftwf_complex *> (buf.data ()),
-					 reinterpret_cast<fftwf_complex *> (buf_fft));
-		    }else{
-		      for(size_t i=0;i<buf.size();++i){
-			buf_fft[i]=buf[i];
-		      }
-		    }
-		    
+
+                    if (ch_split != 1)
+                        {
+                            fftwf_execute_dft (fft, reinterpret_cast<fftwf_complex *> (buf.data ()),
+                                               reinterpret_cast<fftwf_complex *> (buf_fft));
+                        }
+                    else
+                        {
+                            for (size_t i = 0; i < buf.size (); ++i)
+                                {
+                                    buf_fft[i] = buf[i];
+                                }
+                        }
                 }
 
 
@@ -281,13 +291,13 @@ void Daq::run ()
             auto old_buf_id = old_id / ch_split / n_chunks;
             if (buf_id != old_buf_id)
                 {
-                    auto now1=std::chrono::system_clock::now();
-                    std::chrono::duration<double> dur=now1-now;
-                    auto dt=dur.count();
-                    auto MBps=byte_count/1e6/dt;
-                    std::cerr<<"dt="<<dt<<" rate= "<<MBps<<" MBps"<<std::endl;
-                    now=now1;
-                    byte_count=0;            
+                    auto now1 = std::chrono::system_clock::now ();
+                    std::chrono::duration<double> dur = now1 - now;
+                    auto dt = dur.count ();
+                    auto MBps = byte_count / 1e6 / dt;
+                    std::cerr << "dt=" << dt << " rate= " << MBps << " MBps" << std::endl;
+                    now = now1;
+                    byte_count = 0;
                     // std::cout<<buf_id<<std::endl;
                     p->buf_id = buf_id;
                     bufq.submit ();
