@@ -272,7 +272,7 @@ void Daq::run ()
                     // std::cout<<id<<" "<< 100000./(id-old_stat_id)<<std::endl;
                     if (id - old_stat_id != 100000)
                         {
-                            std::cout << "losting " << id - old_stat_id - 100000 << " packets" << std::endl;
+                            std::cout << "losting " << id - old_stat_id - 100000 << " packets "<< (id - old_stat_id - 100000)/100000. << std::endl;
                         }
                     old_stat_id = id;
                 }
