@@ -6,7 +6,7 @@
 #include <omp.h>
 using namespace std;
 
-constexpr size_t N_RAW_CH = 2048 / 2;
+constexpr size_t N_RAW_CH = 1680-368;
 constexpr size_t CH_SPLIT = 1;
 constexpr size_t N_CH = N_RAW_CH * CH_SPLIT;
 constexpr size_t N_CHUNKS = 65536 / CH_SPLIT * 4;
