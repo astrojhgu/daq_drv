@@ -51,7 +51,7 @@ ant.lon='86.422551'
 ant.lat='42.552729'
 
 for strtime in open(sys.argv[1]):
-    print strtime
+    print strtime.strip()
     ant.date=strtime
     xy = np.array(struct.unpack('<{0}f'.format(nchannels * 2 ), vis_xy.read(nchannels*2*sizeof_float)))
     xx = np.array(struct.unpack('<{0}f'.format(nchannels * 2 ), vis_xx.read(nchannels*2*sizeof_float)))

@@ -76,7 +76,7 @@ int main (int argc, char *argv[])
 
             for (size_t i = 0; i < N_CH; ++i)
                 {
-                    ofs << freq_min + i * dnu << " " << corr[i].real () << " " << corr[i].imag () << std::endl;
+		  ofs << freq_min + i * dnu << " " << corr[i].real () << std::endl;
                 }
             ofs.close ();
         }
