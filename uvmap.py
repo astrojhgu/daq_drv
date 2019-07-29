@@ -64,13 +64,15 @@ for strtime in open(sys.argv[1]):
     for i in range(0,nchannels):
         ch=ch_beg+i
         f=ch*freq_per_ch
+        if f>185e6 or f<55e6 or (f>137.5e6 and f<137.9e6):
+            continue
         lbd=c/f
         cc=cross_corr[i]*np.exp(1j*delay/lbd*2*np.pi)
         u=bl*math.cos(sid_angle)/lbd
         v=bl*math.sin(sid_angle)/lbd
         ui=int(u/max_uv*(img_size/2)+img_size/2)
         vi=int(v/max_uv*(img_size/2)+img_size/2)
-        if ui>=0 and ui<img_size and vi>=0 and vi<img_size and not math.isnan(cross_corr[i].real) and not math.isnan(cross_corr[i].imag):
+        if ui>=0 and ui<img_size and vi>=0 and vi<img_size and not math.isnan(cross_corr[i].real) and not math.isnan(cross_corr[i].imag) and abs(cross_corr[i])<0.01:
             mxr[vi,ui]+=cc.real
             mxi[vi,ui]+=cc.imag
             wgt[vi,ui]+=1

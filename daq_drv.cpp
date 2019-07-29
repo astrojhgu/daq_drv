@@ -27,7 +27,7 @@ constexpr float mean_k_init = 0.0f;
 constexpr float mean_k_final = (average_cnt - 1.0) / average_cnt;
 constexpr float mean_k_rate = 1e-3;
 
-void update_mean_k (float &mean_k)
+static void update_mean_k (float &mean_k)
 {
     mean_k -= (mean_k - mean_k_final) * mean_k_rate;
 }

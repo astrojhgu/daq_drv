@@ -12,6 +12,8 @@ if len(sys.argv)<2:
 
 corr=np.loadtxt(sys.argv[1]);
 
+mask=(corr[:,0]>137.9) | (corr[:,0]<137.5)
+
 if len(sys.argv)==2:
     auto1=1.0
     auto2=1.0
@@ -23,10 +25,10 @@ for i in range(1, corr.shape[1]):
     corr[:,i]/=np.sqrt(auto1*auto2)
 
 if corr.shape[1]==3:
-    plt.plot(corr[:,0], corr[:,1])
-    plt.plot(corr[:,0], corr[:,2])
+    plt.plot(corr[mask,0], corr[mask,1],'.',markersize=1)
+    #plt.plot(corr[mask,0], corr[mask,2])
 elif corr.shape[1]==2:
-    plt.plot(corr[:,0], np.log10(corr[:,1])*10)
+    plt.plot(corr[mask,0], np.log10(corr[mask,1])*10)
 
 plt.tight_layout()
 plt.savefig('corr.png')

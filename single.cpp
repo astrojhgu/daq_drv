@@ -54,8 +54,12 @@ int main (int argc, char *argv[])
             */
             vector<std::complex<float>> corr (N_CH);
             auto ptr = std::get<1> (data)[0];
+	    vector<std::complex<float>> corr1(N_CH);
 
-
+	    for (size_t j = 0; j < N_CH; ++j){
+	      const auto i=0;
+	      corr1[j] = ptr[i * N_CH + j] * std::conj (ptr[i * N_CH + j]);
+	    }
             for (size_t i = 0; i < N_CHUNKS; ++i)
                 {
 #pragma omp parallel for num_threads(4)
@@ -63,21 +67,23 @@ int main (int argc, char *argv[])
                     for (size_t j = 0; j < N_CH; ++j)
                         {
 
-                            corr[j] += ptr[i * N_CH + j] * std::conj (ptr[i * N_CH + j]) / (float)N_CHUNKS;
+			  corr[j] += ptr[i * N_CH + j] * std::conj (ptr[i * N_CH + j]) / (float)N_CHUNKS;
 
                             // corr[j]+=ptr[i*N_CH+j].real()/(float)N_CHUNKS;
                         }
                 }
 
             ofstream ofs ("auto.txt");
-
+	    ofstream ofs1("auto1.txt");
             // std::cout<<p1[CH_SPLIT/2+CH_SPLIT]<<std::endl;;
             std::cout << corr[CH_SPLIT / 2] << std::endl;
 
             for (size_t i = 0; i < N_CH; ++i)
                 {
 		  ofs << freq_min + i * dnu << " " << corr[i].real () << std::endl;
+		  ofs1 << freq_min + i * dnu << " " << corr1[i].real () << std::endl;
                 }
             ofs.close ();
+	    ofs1.close ();
         }
 }
